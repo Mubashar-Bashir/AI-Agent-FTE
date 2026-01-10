@@ -1,0 +1,46 @@
+.
+├── .claude/                 # Claude Code configuration
+│   └── commands/            # Custom commands
+├── .git/                    # Git version control
+│   ├── branches/            # Branch information
+│   ├── hooks/               # Git hooks
+│   ├── info/                # Repository info
+│   └── refs/                # References
+│       ├── heads/           # Local branches
+│       └── tags/            # Tags
+├── .obsidian/              # Obsidian note-taking config
+├── .specify/               # Spec-Driven Development tools
+│   ├── memory/             # Project memory
+│   ├── scripts/            # Scripts
+│   │   └── bash/          # Bash scripts
+│   └── templates/          # Templates
+├── .venv/                  # Python virtual environment
+│   ├── bin/                # Executables
+│   ├── include/            # Headers
+│   │   └── site/          # Site packages
+│   └── lib/                # Libraries
+│       └── python3.14/     # Python 3.14 packages
+├── 00_Workspace/           # Workspace (symlink)
+├── 10_Governance/          # Governance (symlink)
+├── 20_Archive/             # Archive (symlink)
+├── 99_Internal/            # Internal (symlink)
+├── FTE_Vualt/              # FTE Vault
+│   └── .obsidian/         # Obsidian config for vault
+├── dig_ai_fte.egg-info/    # Package metadata
+├── specs/                  # Project specifications
+├── src/                    # Source code
+│   ├── core/              # Core functionality
+│   ├── dig_ai_fte.egg-info/ # Source package info
+│   ├── skills/            # Skills/modules
+│   └── utils/             # Utilities
+├── .env.example           # Environment variables example
+├── .gitignore             # Git ignore rules
+├── .python-version        # Python version
+├── AGENTS.md              # Agents documentation
+├── CLAUDE.md              # Claude Code rules
+├── README.md              # Project readme
+├── __init__.py            # Package init
+├── auto_sync.py           # Auto-sync script
+├── pyproject.toml         # Project configuration
+├── sync_to_obsidian.sh    # Sync script to Obsidian
+└── uv.lock                # Dependency lock file

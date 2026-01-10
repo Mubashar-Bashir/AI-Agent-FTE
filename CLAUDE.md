@@ -208,3 +208,10 @@ Wait for consent; never auto-create ADRs. Group related decisions (stacks, authe
 
 ## Code Standards
 See `.specify/memory/constitution.md` for code quality, testing, performance, security, and architecture principles.
+
+## Active Technologies
+- Python 3.11+ + watchdog (for file monitoring), PyYAML (for YAML parsing), pathlib (for file operations) (001-workspace-observer)
+- File-based storage (.observer_state.json for state persistence, Factory_Board.md and SDD_Tracker.md for Kanban synchronization) (001-workspace-observer)
+
+## Recent Changes
+- 001-workspace-observer: Added Python 3.11+ + watchdog (for file monitoring), PyYAML (for YAML parsing), pathlib (for file operations)

@@ -1,0 +1,93 @@
+"""
+File monitoring module for the Automated Workspace Observer.
+
+This module uses the watchdog library to monitor the /specs directory
+for file creation, modification, and deletion events.
+"""
+import os
+import time
+import threading
+from pathlib import Path
+from typing import Optional, Callable
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler, FileSystemEvent
+
+from .processor import SpecProcessor
+from .utils import setup_logger
+
+
+class SpecEventHandler(FileSystemEventHandler):
+    """Handles file system events for spec files."""
+
+    def __init__(self, processor: SpecProcessor, logger=None):
+        super().__init__()
+        self.processor = processor
+        self.logger = logger or setup_logger()
+
+    def on_created(self, event: FileSystemEvent):
+        """Handle file creation events."""
+        if event.is_directory:
+            return
+
+        file_path = Path(event.src_path)
+        if file_path.suffix.lower() in ['.md', '.txt'] and 'specs' in str(file_path):
+            self.logger.info(f"File created: {file_path}")
+            self.processor.queue_file_change(str(file_path), 'created')
+
+    def on_modified(self, event: FileSystemEvent):
+        """Handle file modification events."""
+        if event.is_directory:
+            return
+
+        file_path = Path(event.src_path)
+        if file_path.suffix.lower() in ['.md', '.txt'] and 'specs' in str(file_path):
+            self.logger.info(f"File modified: {file_path}")
+            self.processor.queue_file_change(str(file_path), 'modified')
+
+    def on_deleted(self, event: FileSystemEvent):
+        """Handle file deletion events."""
+        if event.is_directory:
+            return
+
+        file_path = Path(event.src_path)
+        if file_path.suffix.lower() in ['.md', '.txt'] and 'specs' in str(file_path):
+            self.logger.info(f"File deleted: {file_path}")
+            self.processor.queue_file_change(str(file_path), 'deleted')
+
+
+class SpecMonitor:
+    """Monitors the specs directory for file changes."""
+
+    def __init__(self, spec_dir: str = "./specs", logger=None):
+        self.spec_dir = Path(spec_dir)
+        self.observer = Observer()
+        self.processor = SpecProcessor(logger=logger)
+        self.event_handler = SpecEventHandler(self.processor, logger)
+        self.logger = logger or setup_logger()
+        self.running = False
+
+    def start(self):
+        """Start monitoring the specs directory."""
+        if not self.spec_dir.exists():
+            self.spec_dir.mkdir(parents=True, exist_ok=True)
+            self.logger.info(f"Created specs directory: {self.spec_dir}")
+
+        self.observer.schedule(
+            self.event_handler,
+            str(self.spec_dir),
+            recursive=True
+        )
+        self.observer.start()
+        self.running = True
+        self.logger.info(f"Started monitoring directory: {self.spec_dir}")
+
+    def stop(self):
+        """Stop monitoring the specs directory."""
+        self.observer.stop()
+        self.observer.join()
+        self.running = False
+        self.logger.info("Stopped monitoring")
+
+    def is_running(self):
+        """Check if the monitor is currently running."""
+        return self.running
