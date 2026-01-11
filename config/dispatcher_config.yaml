@@ -1,0 +1,26 @@
+# Dispatcher Configuration
+dispatcher:
+  enabled: true
+  max_concurrent_dispatches: 3
+  throttle_interval_ms: 1000
+  retry_attempts: 2
+  retry_delay_ms: 5000
+  recursion_depth_limit: 3
+  log_level: info
+
+# Logging Configuration
+logging:
+  retention_days: 90
+  critical_retention_days: 365
+  max_file_size_mb: 100
+  compression: gzip  # Compress logs older than 7 days
+
+# Debouncing Configuration
+debouncing:
+  time_window_seconds: 30
+  cache_size_limit: 1000
+
+# Lock Configuration
+locking:
+  timeout_seconds: 5
+  stale_lock_threshold_seconds: 60

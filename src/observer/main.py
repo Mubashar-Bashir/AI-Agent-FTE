@@ -14,6 +14,15 @@ from pathlib import Path
 from .monitor import SpecMonitor
 from .utils import setup_logger
 
+# Import dispatcher integration
+try:
+    from dispatcher.integration import ObserverIntegration
+    from dispatcher.main import DispatcherMain
+    HAS_DISPATCHER = True
+except ImportError:
+    HAS_DISPATCHER = False
+    print("Warning: Dispatcher not available. Some features may be limited.")
+
 
 class WorkspaceObserver:
     """Main class for the workspace observer service."""
@@ -25,6 +34,29 @@ class WorkspaceObserver:
         self.logger = setup_logger()
         self.running = False
         self._stop_event = threading.Event()
+
+        # Initialize dispatcher integration if available
+        self.dispatcher_integration = None
+        self._initialize_dispatcher_integration()
+
+    def _initialize_dispatcher_integration(self):
+        """Initialize integration with the skill dispatcher if available."""
+        if HAS_DISPATCHER:
+            try:
+                # Initialize dispatcher
+                dispatcher = DispatcherMain()
+                dispatcher.setup()
+
+                # Create integration
+                self.dispatcher_integration = ObserverIntegration(dispatcher)
+
+                # Start monitoring for dispatcher-relevant changes
+                self.dispatcher_integration.start_monitoring()
+
+                self.logger.info("Successfully initialized dispatcher integration")
+            except Exception as e:
+                self.logger.error(f"Failed to initialize dispatcher integration: {e}")
+                self.dispatcher_integration = None
 
     def start(self):
         """Start the observer service."""
@@ -83,6 +115,10 @@ class WorkspaceObserver:
 
             if self.monitor:
                 self.monitor.stop()
+
+            # Stop dispatcher integration if active
+            if self.dispatcher_integration:
+                self.dispatcher_integration.stop_monitoring()
 
             # Remove PID file
             self._remove_pid_file()

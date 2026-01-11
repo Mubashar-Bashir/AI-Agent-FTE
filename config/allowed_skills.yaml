@@ -1,0 +1,13 @@
+skills:
+- description: Analyzes errors and proposes fixes without modifying code
+  name: systematic-debugging
+  requires_approval: false
+  risk_level: medium
+- description: Creates and modifies test files
+  name: test-driven-development
+  requires_approval: true
+  risk_level: high
+- description: Runs verification commands and reports results
+  name: verification-before-completion
+  requires_approval: false
+  risk_level: low

@@ -1,0 +1,25 @@
+# Event Trigger Configuration
+# Defines patterns that trigger skill execution
+
+triggers:
+  - id: "error-detection"
+    name: "Python Error Detection"
+    event_type: "error"
+    pattern: "TypeError: .* object has no attribute|AttributeError|ValueError"
+    skill_to_invoke: "systematic-debugging"
+    enabled: true
+    priority: 5
+    risk_level: "medium"
+    requires_approval: false
+    debounce_seconds: 30
+
+  - id: "test-failure"
+    name: "Test Failure Detection"
+    event_type: "error"
+    pattern: "FAILED.*test_|AssertionError|pytest.*failed"
+    skill_to_invoke: "test-driven-development"
+    enabled: true
+    priority: 10
+    risk_level: "high"
+    requires_approval: true
+    debounce_seconds: 60

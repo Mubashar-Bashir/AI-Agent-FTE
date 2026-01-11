@@ -1,37 +1,37 @@
-# Implementation Plan: Automated Workspace Observer
+# Implementation Plan: [FEATURE]
 
-**Branch**: `001-workspace-observer` | **Date**: 2026-01-10 | **Spec**: specs/001-workspace-observer/spec.md
-**Input**: Feature specification from `/specs/001-workspace-observer/spec.md`
+**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
+**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
 
 **Note**: This template is filled in by the `/sp.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
 
 ## Summary
 
-The Automated Workspace Observer is a Python-based background service that monitors the /specs directory for file changes in real-time. When spec files are created, modified, or deleted, the system automatically updates the corresponding Kanban cards in 00_Workspace/Factory_Board.md and updates the SDD tracker in 30_Specifications/SDD_Tracker.md based on YAML metadata. The implementation uses the watchdog library for efficient file monitoring, implements a task queue for alphabetical processing of simultaneous changes (FR-008), maintains state in a .observer_state.json file for resilience across restarts, and follows the proactive monitoring principle from Constitution I.
+[Extract from feature spec: primary requirement + technical approach from research]
 
 ## Technical Context
 
-**Language/Version**: Python 3.11+
-**Primary Dependencies**: watchdog (for file monitoring), PyYAML (for YAML parsing), pathlib (for file operations)
-**Storage**: File-based storage (.observer_state.json for state persistence, Factory_Board.md and SDD_Tracker.md for Kanban synchronization)
-**Testing**: pytest for unit and integration tests
-**Target Platform**: Cross-platform (Linux, macOS, Windows)
-**Project Type**: Single project - background service
-**Performance Goals**: Respond to file changes within 5 seconds (as per SC-001), handle up to 10 simultaneous file changes (as per SC-004)
-**Constraints**: Must run continuously for 24+ hours without manual restart (as per SC-002), maintain 99% reliability in processing updates (as per SC-003), implement robust error recovery and graceful degradation as per Constitution VI
-**Scale/Scope**: Designed to monitor the /specs directory and update corresponding Kanban board entries
+<!--
+  ACTION REQUIRED: Replace the content in this section with the technical details
+  for the project. The structure here is presented in advisory capacity to guide
+  the iteration process.
+-->
+
+**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
+**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
+**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
+**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
+**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+**Project Type**: [single/web/mobile - determines source structure]  
+**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
+**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
+**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-### Compliance Verification:
-- **Constitution I (Proactive Autonomous Employee Mindset)**: ✅ PASSED - The observer runs as a background service providing continuous monitoring without manual intervention
-- **Constitution II (Human-in-the-Loop Safeguards)**: ✅ PASSED - No critical operations requiring human oversight in this feature; all file operations are within the local project directory
-- **Constitution III (Spec-Driven Development)**: ✅ PASSED - Following SDD workflow: Specification → Planning → Implementation
-- **Constitution IV (Obsidian Integration & Transparency)**: ✅ PASSED - All operations are logged and mirrored in the local filesystem for transparency
-- **Constitution V (Local-First Data Sovereignty)**: ✅ PASSED - All operations are local, no external cloud services required
-- **Constitution VI (Error Recovery & Graceful Degradation)**: ✅ PASSED - Implementation includes: 1) Module-level exception handling in all components (monitor.py, processor.py, kanban_updater.py, tracker_updater.py), 2) Configurable retry mechanisms with exponential backoff for transient errors (src/config/settings.py), 3) Graceful degradation when individual file operations fail without stopping the entire service, 4) State preservation during temporary failures via .observer_state.json, 5) Comprehensive logging of all error conditions to observer.log for debugging
+[Gates determined based on constitution file]
 
 ## Project Structure
 
@@ -48,40 +48,57 @@ specs/[###-feature]/
 ```
 
 ### Source Code (repository root)
+<!--
+  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
+  for this feature. Delete unused options and expand the chosen structure with
+  real paths (e.g., apps/admin, packages/something). The delivered plan must
+  not include Option labels.
+-->
 
 ```text
+# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
 src/
-├── observer/
-│   ├── __init__.py
-│   ├── main.py                 # Entry point for the observer service
-│   ├── monitor.py              # File monitoring implementation using watchdog
-│   ├── processor.py            # Logic for processing spec file changes
-│   ├── kanban_updater.py       # Updates Factory_Board.md Kanban cards
-│   ├── tracker_updater.py      # Updates SDD_Tracker.md with status/percentage
-│   ├── state_manager.py        # Handles .observer_state.json for persistence
-│   └── utils.py                # Utility functions for YAML parsing and file ops
+├── models/
+├── services/
 ├── cli/
-│   └── observer_cli.py         # Command-line interface for the observer
-└── config/
-    └── settings.py             # Configuration settings for the observer
+└── lib/
 
 tests/
-├── unit/
-│   ├── test_monitor.py         # Unit tests for file monitoring
-│   ├── test_processor.py       # Unit tests for spec file processing
-│   ├── test_kanban_updater.py  # Unit tests for Kanban updates
-│   └── test_tracker_updater.py # Unit tests for tracker updates
+├── contract/
 ├── integration/
-│   └── test_observer_integration.py  # Integration tests
-└── fixtures/
-    └── sample_spec.md          # Sample spec file for testing
+└── unit/
 
-logs/
-└── observer.log               # Log file for observer operations (created at runtime)
+# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
+backend/
+├── src/
+│   ├── models/
+│   ├── services/
+│   └── api/
+└── tests/
+
+frontend/
+├── src/
+│   ├── components/
+│   ├── pages/
+│   └── services/
+└── tests/
+
+# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
+api/
+└── [same as backend above]
+
+ios/ or android/
+└── [platform-specific structure: feature modules, UI flows, platform tests]
 ```
 
-**Structure Decision**: Single project structure chosen for the background service implementation. The observer is implemented as a modular Python package with dedicated modules for monitoring, processing, and updating operations. The CLI module provides command-line interface capabilities, and the config module contains settings. The tests directory includes unit and integration tests to ensure reliability.
+**Structure Decision**: [Document the selected structure and reference the real
+directories captured above]
 
 ## Complexity Tracking
 
-No constitution violations identified. All implementation approaches comply with the project constitution principles.
+> **Fill ONLY if Constitution Check has violations that must be justified**
+
+| Violation | Why Needed | Simpler Alternative Rejected Because |
+|-----------|------------|-------------------------------------|
+| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
+| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
