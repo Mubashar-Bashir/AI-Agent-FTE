@@ -1,163 +1,215 @@
-#!/usr/bin/env python3
 """
-Skill Dispatcher Main Entry Point
-
-Autonomous dispatcher that monitors logs for error patterns
-and triggers appropriate skills with HITL approval.
-
-Phase 1-2 Complete: Foundational infrastructure ready
-Next: Implement User Story 1 (Error Detection)
+Main entry point for the Autonomous Skill Dispatcher
 """
 
 import sys
-import time
 import signal
+import logging
 from pathlib import Path
-from typing import NoReturn
+from typing import Optional
 
-# Add project root to path
-PROJECT_ROOT = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+from .config_manager import ConfigManager
+from .logger import ExecutionLogger
+from .event_detector import EventDetector
+from .skill_dispatcher import SkillDispatcher
+from .debouncer import Debouncer
+from .event_hasher import EventHasher
+from .kill_switch import KillSwitch
+from .exceptions import ConfigurationError
 
-from src.dispatcher.config_manager import ConfigManager
-from src.dispatcher.logger import ExecutionLogger
-from src.dispatcher.atomic_counter import AtomicCounter
 
-
-class SkillDispatcherService:
+class DispatcherMain:
     """
-    Main dispatcher service.
-
-    Currently implements Phase 1-2 foundational infrastructure.
-    User Story implementations (error detection, HITL, etc.) to follow.
+    Main dispatcher orchestrator that coordinates all components
     """
-
-    def __init__(self, config_dir: Path):
-        """Initialize dispatcher service."""
+    
+    def __init__(self, config_dir: str = "config"):
         self.config_dir = config_dir
         self.running = False
-
-        # Load configuration
-        print("📋 Loading configuration...")
-        self.config = ConfigManager(config_dir)
-
+        
+        # Components (initialized in setup)
+        self.config_manager: Optional[ConfigManager] = None
+        self.execution_logger: Optional[ExecutionLogger] = None
+        self.debouncer: Optional[Debouncer] = None
+        self.event_hasher: Optional[EventHasher] = None
+        self.event_detector: Optional[EventDetector] = None
+        self.skill_dispatcher: Optional[SkillDispatcher] = None
+        self.kill_switch: Optional[KillSwitch] = None
+        
         # Setup logging
-        logs_dir = PROJECT_ROOT / self.config.get("paths.logs_dir", "logs/dispatcher")
-        retention_days = self.config.get("logging.retention_days", 90)
-        critical_retention_days = self.config.get("logging.critical_retention_days", 365)
-        log_level = self.config.get("logging.log_level", "INFO")
-
-        self.logger = ExecutionLogger(
-            logs_dir=logs_dir,
-            retention_days=retention_days,
-            critical_retention_days=critical_retention_days,
-            log_level=log_level
+        self.logger = self._setup_basic_logging()
+    
+    def _setup_basic_logging(self) -> logging.Logger:
+        """Setup basic logging before ExecutionLogger is available"""
+        logger = logging.getLogger("dispatcher.main")
+        logger.setLevel(logging.INFO)
+        
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
-
-        # Initialize atomic counter for execution depth tracking
-        state_file = PROJECT_ROOT / self.config.get("paths.state_file", ".state/global_counter.json")
-        lock_file = PROJECT_ROOT / self.config.get("paths.lock_file", "locks/dispatcher.lock")
-
-        self.counter = AtomicCounter(state_file, lock_file)
-
-        # Register signal handlers
-        signal.signal(signal.SIGTERM, self._handle_shutdown)
-        signal.signal(signal.SIGINT, self._handle_shutdown)
-
-        self.logger.info("Dispatcher service initialized (Phase 1-2 Complete)")
-        print("✅ Dispatcher service initialized")
-
-    def _handle_shutdown(self, signum, frame):
-        """Handle graceful shutdown."""
-        print(f"\n🛑 Received shutdown signal ({signum})")
-        self.logger.info(f"Shutdown signal received: {signum}")
-        self.running = False
-
-    def start(self) -> NoReturn:
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        
+        return logger
+    
+    def setup(self):
+        """Initialize all dispatcher components"""
+        try:
+            self.logger.info("Initializing Autonomous Skill Dispatcher...")
+            
+            # Load configuration
+            self.config_manager = ConfigManager(config_dir=self.config_dir)
+            self.logger.info("Configuration loaded successfully")
+            
+            # Setup execution logger
+            log_config = self.config_manager.dispatcher_config.get("logging", {})
+            self.execution_logger = ExecutionLogger(
+                retention_days=log_config.get("retention_days", 90),
+                critical_retention_days=log_config.get("critical_retention_days", 365),
+                max_file_size_mb=log_config.get("max_file_size_mb", 100)
+            )
+            self.logger.info("Execution logger initialized")
+            
+            # Setup kill-switch
+            self.kill_switch = KillSwitch(logger=self.logger)
+            self.logger.info("Kill-switch initialized")
+            
+            # Setup debouncer
+            debounce_config = self.config_manager.dispatcher_config.get("debouncing", {})
+            self.debouncer = Debouncer(
+                time_window_seconds=debounce_config.get("time_window_seconds", 30),
+                cache_size_limit=debounce_config.get("cache_size_limit", 1000)
+            )
+            self.logger.info("Debouncer initialized")
+            
+            # Setup event hasher
+            self.event_hasher = EventHasher()
+            self.logger.info("Event hasher initialized")
+            
+            # Setup event detector
+            self.event_detector = EventDetector(
+                config_manager=self.config_manager,
+                debouncer=self.debouncer,
+                event_hasher=self.event_hasher,
+                logger=self.logger
+            )
+            self.logger.info(
+                f"Event detector initialized with {len(self.event_detector.get_active_patterns())} patterns"
+            )
+            
+            # Setup skill dispatcher
+            self.skill_dispatcher = SkillDispatcher(
+                config_manager=self.config_manager,
+                execution_logger=self.execution_logger,
+                event_hasher=self.event_hasher,
+                logger=self.logger
+            )
+            self.logger.info("Skill dispatcher initialized")
+            
+            self.logger.info("✓ Dispatcher initialization complete")
+            
+        except ConfigurationError as e:
+            self.logger.error(f"Configuration error: {e}")
+            raise
+        except Exception as e:
+            self.logger.error(f"Failed to initialize dispatcher: {e}")
+            raise
+    
+    def process_log_line(self, log_line: str, source_file: str = "") -> int:
         """
-        Start the dispatcher service.
-
-        Currently runs as a placeholder service until User Stories are implemented.
+        Process a single log line and dispatch any matching skills
+        
+        Args:
+            log_line: The log line to process
+            source_file: Optional source file path
+            
+        Returns:
+            Number of skills dispatched
         """
-        self.running = True
-
-        print("🚀 Skill Dispatcher Service Started")
-        print("=" * 50)
-        print("Status: Phase 1-2 Complete (Foundational Infrastructure)")
-        print("Next: Implement User Story 1 (Error Detection & Triggering)")
-        print("")
-        print("Configuration:")
-        print(f"  - Max Concurrent Dispatches: {self.config.get('dispatcher.max_concurrent_dispatches')}")
-        print(f"  - Recursion Depth Limit: {self.config.get('dispatcher.recursion_depth_limit')}")
-        print(f"  - Debounce Window: {self.config.get('dispatcher.debounce_window_seconds')}s")
-        print(f"  - Allowed Skills: {len(self.config.get_allowed_skills())}")
-        print(f"  - Event Triggers: {len(self.config.get_event_triggers())}")
-        print("")
-        print("Logs: logs/dispatcher/dispatcher.log")
-        print("State: .state/global_counter.json")
-        print("")
-        print("Press Ctrl+C to stop...")
-        print("=" * 50)
-
-        self.logger.info("Dispatcher service started - monitoring mode")
-
-        # Main service loop (placeholder until User Story 1 is implemented)
-        heartbeat_count = 0
-        while self.running:
+        if not self.event_detector or not self.skill_dispatcher:
+            raise RuntimeError("Dispatcher not initialized - call setup() first")
+        
+        # Check kill-switch first
+        if self.kill_switch and self.kill_switch.is_active():
+            self.logger.info("Kill-switch active - skipping event processing")
+            return 0
+        
+        # Detect events
+        dispatch_requests = self.event_detector.detect_events(log_line, source_file)
+        
+        if not dispatch_requests:
+            return 0
+        
+        # Dispatch skills
+        dispatched_count = 0
+        for request in dispatch_requests:
             try:
-                # Heartbeat logging every 60 seconds
-                if heartbeat_count % 60 == 0:
-                    self.logger.info(
-                        f"Service heartbeat - uptime: {heartbeat_count}s, "
-                        f"kill_switch: {self.counter.is_kill_switch_active()}"
-                    )
-
-                    # Cleanup old logs daily (roughly)
-                    if heartbeat_count % 86400 == 0:
-                        print("🧹 Cleaning up old logs...")
-                        self.logger.cleanup_old_logs()
-
-                time.sleep(1)
-                heartbeat_count += 1
-
-            except KeyboardInterrupt:
-                break
+                record = self.skill_dispatcher.dispatch(request)
+                dispatched_count += 1
+                
+                self.logger.info(
+                    f"Dispatched: {request['skill_name']} (status: {record.status})"
+                )
+                
             except Exception as e:
-                self.logger.error(f"Error in main loop: {e}")
-                print(f"⚠️  Error: {e}")
-                time.sleep(5)  # Back off on errors
-
-        self._shutdown()
-
-    def _shutdown(self):
-        """Perform graceful shutdown."""
-        print("\n🛑 Shutting down dispatcher service...")
-        self.logger.info("Dispatcher service shutting down")
-
-        # Reset state on clean shutdown
-        self.counter.reset()
-
-        print("✅ Dispatcher service stopped cleanly")
-        self.logger.info("Dispatcher service stopped")
+                self.logger.error(
+                    f"Failed to dispatch skill '{request['skill_name']}': {e}"
+                )
+        
+        return dispatched_count
+    
+    def run(self):
+        """
+        Run the dispatcher in continuous mode (placeholder for integration)
+        
+        This will be integrated with the Workspace Observer in Phase 9
+        """
+        self.logger.info("Dispatcher running in standalone mode...")
+        self.logger.info("Waiting for log events (integrate with Observer for full functionality)")
+        self.running = True
+        
+        # Setup signal handlers
+        signal.signal(signal.SIGINT, self._signal_handler)
+        signal.signal(signal.SIGTERM, self._signal_handler)
+        
+        # Keep running until interrupted
+        try:
+            while self.running:
+                # In production, this will receive events from the Observer
+                import time
+                time.sleep(1)
+        except KeyboardInterrupt:
+            self.logger.info("Dispatcher interrupted by user")
+        finally:
+            self.shutdown()
+    
+    def _signal_handler(self, signum, frame):
+        """Handle shutdown signals"""
+        self.logger.info(f"Received signal {signum}, shutting down...")
+        self.running = False
+    
+    def shutdown(self):
+        """Gracefully shutdown the dispatcher"""
+        self.logger.info("Shutting down dispatcher...")
+        
+        # Cleanup components
+        if self.execution_logger:
+            self.execution_logger.compress_old_logs()
+            self.execution_logger.cleanup_old_logs()
+        
+        self.logger.info("Dispatcher shutdown complete")
 
 
 def main():
-    """Main entry point."""
-    # Configuration directory
-    config_dir = PROJECT_ROOT / "config"
-
-    if not config_dir.exists():
-        print(f"❌ Error: Config directory not found at {config_dir}")
-        sys.exit(1)
-
-    # Create and start service
+    """CLI entry point"""
+    dispatcher = DispatcherMain()
+    
     try:
-        service = SkillDispatcherService(config_dir)
-        service.start()
+        dispatcher.setup()
+        dispatcher.run()
     except Exception as e:
-        print(f"❌ Fatal error: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"Fatal error: {e}", file=sys.stderr)
         sys.exit(1)
 
 

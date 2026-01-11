@@ -150,8 +150,63 @@ class SpecProcessor:
                 self.kanban_updater.update_kanban_card(file_path, default_yaml_data)
                 self.tracker_updater.update_tracker_entry(file_path, default_yaml_data)
 
+            # Additionally, process the content through the dispatcher to check for any patterns
+            # that might trigger skills based on the spec content
+            self._process_with_dispatcher(content, file_path)
+
         except Exception as e:
             self.logger.error(f"Error handling spec file update for {file_path}: {e}")
+
+    def _process_with_dispatcher(self, content: str, file_path: str):
+        """
+        Process the file content through the dispatcher to check for pattern matches.
+
+        Args:
+            content: Content of the file to process
+            file_path: Path to the file being processed
+        """
+        try:
+            # Import dispatcher integration if available
+            try:
+                from dispatcher.main import DispatcherMain
+                from dispatcher.integration import ObserverIntegration
+
+                # Initialize a dispatcher to process the content
+                dispatcher = DispatcherMain()
+                dispatcher.setup()
+
+                # Process content through dispatcher
+                lines = content.split('\n')
+
+                # Process the last few lines of the content to look for potential issues
+                for line_num, line in enumerate(lines[-20:], 1):  # Process last 20 lines
+                    line = line.strip()
+                    if line and len(line) < 1000:  # Skip very long lines and empty lines
+                        try:
+                            # Process the line through the dispatcher
+                            dispatched_count = dispatcher.process_log_line(
+                                log_line=line,
+                                source_file=file_path
+                            )
+
+                            if dispatched_count > 0:
+                                self.logger.info(
+                                    f"Dispatched {dispatched_count} skill(s) from line {line_num} in {file_path}"
+                                )
+
+                        except Exception as e:
+                            self.logger.error(
+                                f"Error processing line {line_num} in {file_path} through dispatcher: {e}"
+                            )
+                            continue
+
+            except ImportError:
+                # Dispatcher is not available, which is fine - just skip this processing
+                self.logger.debug("Dispatcher not available, skipping pattern matching for this file")
+                return
+
+        except Exception as e:
+            self.logger.error(f"Error processing {file_path} with dispatcher: {e}")
 
     def _handle_spec_file_deletion(self, file_path: str):
         """

@@ -31,14 +31,14 @@ description: "Task list for Autonomous Skill Dispatcher implementation"
 
 **Purpose**: Project initialization and basic directory structure
 
-- [ ] T001 Create dispatcher directory structure (src/dispatcher/, config/, .state/, .approvals/, locks/, logs/dispatcher/)
-- [ ] T002 [P] Create requirements-dispatcher.txt with Python 3.11+ dependencies (watchdog, PyYAML, pathlib)
-- [ ] T003 [P] Initialize config/dispatcher_config.yaml with default settings (max_concurrent_dispatches=3, recursion_depth_limit=3)
-- [ ] T004 [P] Initialize config/allowed_skills.yaml with empty skills list and validation schema
-- [ ] T005 [P] Initialize config/event_triggers.yaml with sample error detection pattern
-- [ ] T006 [P] Create locks/dispatcher.lock as empty file for file-based locking
-- [ ] T007 [P] Create .state/global_counter.json with initial state {"global_depth": 0, "instances": {}}
-- [ ] T008 [P] Create logs/dispatcher/.gitkeep to ensure logs directory exists
+- [X] T001 Create dispatcher directory structure (src/dispatcher/, config/, .state/, .approvals/, locks/, logs/dispatcher/)
+- [X] T002 [P] Create requirements-dispatcher.txt with Python 3.11+ dependencies (watchdog, PyYAML, pathlib)
+- [X] T003 [P] Initialize config/dispatcher_config.yaml with default settings (max_concurrent_dispatches=3, recursion_depth_limit=3)
+- [X] T004 [P] Initialize config/allowed_skills.yaml with empty skills list and validation schema
+- [X] T005 [P] Initialize config/event_triggers.yaml with sample error detection pattern
+- [X] T006 [P] Create locks/dispatcher.lock as empty file for file-based locking
+- [X] T007 [P] Create .state/global_counter.json with initial state {"global_depth": 0, "instances": {}}
+- [X] T008 [P] Create logs/dispatcher/.gitkeep to ensure logs directory exists
 
 ---
 
@@ -48,14 +48,14 @@ description: "Task list for Autonomous Skill Dispatcher implementation"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T009 Implement LockManager in src/dispatcher/lock_manager.py with fcntl-based file locking and 5-second timeout
-- [ ] T010 [P] Implement ConfigManager in src/dispatcher/config_manager.py with YAML loading, reload support, and validation
-- [ ] T011 [P] Implement ExecutionLogger in src/dispatcher/logger.py with 90-day retention, daily rotation, and gzip compression
-- [ ] T012 [P] Implement RegexValidator in src/dispatcher/regex_validator.py with ReDoS prevention rules (max length 200, depth < 5)
-- [ ] T013 Implement AtomicCounter in src/dispatcher/atomic_counter.py with file-based state persistence and fcntl locking
-- [ ] T014 [P] Implement EventHasher in src/dispatcher/event_hasher.py with SHA256 hashing and time-window deduplication
-- [ ] T015 [P] Create base DispatcherException hierarchy in src/dispatcher/exceptions.py (LockTimeoutError, UnauthorizedError, DepthLimitError)
-- [ ] T016 Create DispatcherState model in src/dispatcher/models.py with global_execution_depth, kill_switch_active, instance_id fields
+- [X] T009 Implement LockManager in src/dispatcher/lock_manager.py with fcntl-based file locking and 5-second timeout
+- [X] T010 [P] Implement ConfigManager in src/dispatcher/config_manager.py with YAML loading, reload support, and validation
+- [X] T011 [P] Implement ExecutionLogger in src/dispatcher/logger.py with 90-day retention, daily rotation, and gzip compression
+- [X] T012 [P] Implement RegexValidator in src/dispatcher/regex_validator.py with ReDoS prevention rules (max length 200, depth < 5)
+- [X] T013 Implement AtomicCounter in src/dispatcher/atomic_counter.py with file-based state persistence and fcntl locking
+- [X] T014 [P] Implement EventHasher in src/dispatcher/event_hasher.py with SHA256 hashing and time-window deduplication
+- [X] T015 [P] Create base DispatcherException hierarchy in src/dispatcher/exceptions.py (LockTimeoutError, UnauthorizedError, DepthLimitError)
+- [X] T016 Create DispatcherState model in src/dispatcher/models.py with global_execution_depth, kill_switch_active, instance_id fields
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -69,16 +69,16 @@ description: "Task list for Autonomous Skill Dispatcher implementation"
 
 ### Implementation for User Story 1
 
-- [ ] T017 [P] [US1] Create EventTrigger model in src/dispatcher/models.py with event_type, pattern, skill_to_invoke, risk_level, enabled fields
-- [ ] T018 [P] [US1] Create SkillDispatchRecord model in src/dispatcher/models.py with id, timestamp, trigger_event, skill_invoked, result, execution_log fields
-- [ ] T019 [US1] Implement EventDetector in src/dispatcher/event_detector.py with pattern matching and event queue management
-- [ ] T020 [US1] Implement Debouncer in src/dispatcher/debouncer.py with 30-second time-window caching using LRU cache
-- [ ] T021 [US1] Integrate EventHasher with EventDetector in src/dispatcher/event_detector.py to prevent duplicate processing
-- [ ] T022 [US1] Integrate Debouncer with EventDetector in src/dispatcher/event_detector.py for pattern suppression
-- [ ] T023 [US1] Implement SkillDispatcher core in src/dispatcher/skill_dispatcher.py with basic skill invocation logic
-- [ ] T024 [US1] Add ConfigManager integration to EventDetector in src/dispatcher/event_detector.py for loading event triggers from config/event_triggers.yaml
-- [ ] T025 [US1] Add ExecutionLogger integration to SkillDispatcher in src/dispatcher/skill_dispatcher.py for logging all dispatch events
-- [ ] T026 [US1] Create main dispatcher entry point in src/dispatcher/main.py that initializes EventDetector and SkillDispatcher
+- [X] T017 [P] [US1] Create EventTrigger model in src/dispatcher/models.py with event_type, pattern, skill_to_invoke, risk_level, enabled fields
+- [X] T018 [P] [US1] Create SkillDispatchRecord model in src/dispatcher/models.py with id, timestamp, trigger_event, skill_invoked, result, execution_log fields
+- [X] T019 [US1] Implement EventDetector in src/dispatcher/event_detector.py with pattern matching and event queue management
+- [X] T020 [US1] Implement Debouncer in src/dispatcher/debouncer.py with 30-second time-window caching using LRU cache
+- [X] T021 [US1] Integrate EventHasher with EventDetector in src/dispatcher/event_detector.py to prevent duplicate processing
+- [X] T022 [US1] Integrate Debouncer with EventDetector in src/dispatcher/event_detector.py for pattern suppression
+- [X] T023 [US1] Implement SkillDispatcher core in src/dispatcher/skill_dispatcher.py with basic skill invocation logic
+- [X] T024 [US1] Add ConfigManager integration to EventDetector in src/dispatcher/event_detector.py for loading event triggers from config/event_triggers.yaml
+- [X] T025 [US1] Add ExecutionLogger integration to SkillDispatcher in src/dispatcher/skill_dispatcher.py for logging all dispatch events
+- [X] T026 [US1] Create main dispatcher entry point in src/dispatcher/main.py that initializes EventDetector and SkillDispatcher
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - errors automatically detected and skills triggered with debouncing
 
@@ -92,16 +92,16 @@ description: "Task list for Autonomous Skill Dispatcher implementation"
 
 ### Implementation for User Story 2
 
-- [ ] T027 [P] [US2] Create HITLApprovalRequest model in src/dispatcher/models.py with request_id, risk_assessment, recommended_action, status, expires_at fields
-- [ ] T028 [P] [US2] Implement HITLApprovalManager in src/dispatcher/hitl_approval_manager.py with approval request creation and file-based storage
-- [ ] T029 [US2] Implement approval request file generation in src/dispatcher/hitl_approval_manager.py creating .approvals/pending_{request_id}.json with risk assessment
-- [ ] T030 [US2] Implement approval response parsing in src/dispatcher/hitl_approval_manager.py to detect approve/reject decisions from file updates
-- [ ] T031 [US2] Implement timeout handling in src/dispatcher/hitl_approval_manager.py respecting auto_approve_on_timeout flag (default: reject)
-- [ ] T032 [US2] Create CLI commands module in src/dispatcher/cli_commands.py with approve/reject/status command implementations
-- [ ] T033 [US2] Integrate HITLApprovalManager with SkillDispatcher in src/dispatcher/skill_dispatcher.py to check risk_level and requires_approval flags
-- [ ] T034 [US2] Add approval decision logging to ExecutionLogger in src/dispatcher/logger.py with user identity and timestamp
-- [ ] T035 [US2] Implement approval request cleanup in src/dispatcher/hitl_approval_manager.py to remove processed requests after 24 hours
-- [ ] T036 [US2] Update config/allowed_skills.yaml schema to include risk_level and requires_approval fields per skill
+- [X] T027 [P] [US2] Create HITLApprovalRequest model in src/dispatcher/models.py with request_id, risk_assessment, recommended_action, status, expires_at fields
+- [X] T028 [P] [US2] Implement HITLApprovalManager in src/dispatcher/hitl_approval_manager.py with approval request creation and file-based storage
+- [X] T029 [US2] Implement approval request file generation in src/dispatcher/hitl_approval_manager.py creating .approvals/pending_{request_id}.json with risk assessment
+- [X] T030 [US2] Implement approval response parsing in src/dispatcher/hitl_approval_manager.py to detect approve/reject decisions from file updates
+- [X] T031 [US2] Implement timeout handling in src/dispatcher/hitl_approval_manager.py respecting auto_approve_on_timeout flag (default: reject)
+- [X] T032 [US2] Create CLI commands module in src/dispatcher/cli_commands.py with approve/reject/status command implementations
+- [X] T033 [US2] Integrate HITLApprovalManager with SkillDispatcher in src/dispatcher/skill_dispatcher.py to check risk_level and requires_approval flags
+- [X] T034 [US2] Add approval decision logging to ExecutionLogger in src/dispatcher/logger.py with user identity and timestamp
+- [X] T035 [US2] Implement approval request cleanup in src/dispatcher/hitl_approval_manager.py to remove processed requests after 24 hours
+- [X] T036 [US2] Update config/allowed_skills.yaml schema to include risk_level and requires_approval fields per skill
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work - automatic detection with HITL approval for high-risk skills
 
@@ -115,14 +115,14 @@ description: "Task list for Autonomous Skill Dispatcher implementation"
 
 ### Implementation for User Story 3
 
-- [ ] T037 [P] [US3] Implement ExecutionContext in src/dispatcher/execution_context.py to track execution depth and parent-child skill chains
-- [ ] T038 [US3] Implement depth counter increment logic in src/dispatcher/execution_context.py using AtomicCounter before skill execution
-- [ ] T039 [US3] Implement depth counter decrement logic in src/dispatcher/execution_context.py using finally block to ensure cleanup even on failures
-- [ ] T040 [US3] Implement depth limit check in src/dispatcher/skill_dispatcher.py before skill dispatch (reject if depth > 3)
-- [ ] T041 [US3] Add execution chain logging to ExecutionLogger in src/dispatcher/logger.py showing parent → child → grandchild relationships
-- [ ] T042 [US3] Integrate ExecutionContext with SkillDispatcher in src/dispatcher/skill_dispatcher.py to track context per skill invocation
-- [ ] T043 [US3] Add DepthLimitError exception handling in src/dispatcher/skill_dispatcher.py to log and reject skills exceeding depth limit
-- [ ] T044 [US3] Update .state/global_counter.json persistence in src/dispatcher/atomic_counter.py to track per-instance depth for distributed scenarios
+- [X] T037 [P] [US3] Implement ExecutionContext in src/dispatcher/execution_context.py to track execution depth and parent-child skill chains
+- [X] T038 [US3] Implement depth counter increment logic in src/dispatcher/execution_context.py using AtomicCounter before skill execution
+- [X] T039 [US3] Implement depth counter decrement logic in src/dispatcher/execution_context.py using finally block to ensure cleanup even on failures
+- [X] T040 [US3] Implement depth limit check in src/dispatcher/skill_dispatcher.py before skill dispatch (reject if depth > 3)
+- [X] T041 [US3] Add execution chain logging to ExecutionLogger in src/dispatcher/logger.py showing parent → child → grandchild relationships
+- [X] T042 [US3] Integrate ExecutionContext with SkillDispatcher in src/dispatcher/skill_dispatcher.py to track context per skill invocation
+- [X] T043 [US3] Add DepthLimitError exception handling in src/dispatcher/skill_dispatcher.py to log and reject skills exceeding depth limit
+- [X] T044 [US3] Update .state/global_counter.json persistence in src/dispatcher/atomic_counter.py to track per-instance depth for distributed scenarios
 
 **Checkpoint**: All P1 user stories (1, 2, 3) should now be independently functional with full safety controls
 
@@ -136,15 +136,15 @@ description: "Task list for Autonomous Skill Dispatcher implementation"
 
 ### Implementation for User Story 4
 
-- [ ] T045 [P] [US4] Implement KillSwitch in src/dispatcher/kill_switch.py with activate/deactivate/status methods and state persistence
-- [ ] T046 [US4] Implement kill-switch authentication in src/dispatcher/kill_switch.py checking DISPATCHER_ADMIN_TOKEN environment variable
-- [ ] T047 [US4] Add kill-switch state persistence to .state/global_counter.json in src/dispatcher/kill_switch.py
-- [ ] T048 [US4] Implement skill termination logic in src/dispatcher/kill_switch.py sending termination signals to all active skills
-- [ ] T049 [US4] Create CLI kill-switch commands in src/dispatcher/cli_commands.py (activate, deactivate, status)
-- [ ] T050 [US4] Integrate KillSwitch check into SkillDispatcher in src/dispatcher/skill_dispatcher.py to reject dispatches when active
-- [ ] T051 [US4] Add kill-switch event logging to ExecutionLogger in src/dispatcher/logger.py with timestamp, user, and reason
-- [ ] T052 [US4] Implement kill-switch override for pending approvals in src/dispatcher/hitl_approval_manager.py to reject with "Kill-switch override" status
-- [ ] T053 [US4] Add UnauthorizedError handling in src/dispatcher/cli_commands.py for failed authentication attempts with security logging
+- [X] T045 [P] [US4] Implement KillSwitch in src/dispatcher/kill_switch.py with activate/deactivate/status methods and state persistence
+- [X] T046 [US4] Implement kill-switch authentication in src/dispatcher/kill_switch.py checking DISPATCHER_ADMIN_TOKEN environment variable
+- [X] T047 [US4] Add kill-switch state persistence to .state/global_counter.json in src/dispatcher/kill_switch.py
+- [X] T048 [US4] Implement skill termination logic in src/dispatcher/kill_switch.py sending termination signals to all active skills
+- [X] T049 [US4] Create CLI kill-switch commands in src/dispatcher/cli_commands.py (activate, deactivate, status)
+- [X] T050 [US4] Integrate KillSwitch check into SkillDispatcher in src/dispatcher/skill_dispatcher.py to reject dispatches when active
+- [X] T051 [US4] Add kill-switch event logging to ExecutionLogger in src/dispatcher/logger.py with timestamp, user, and reason
+- [X] T052 [US4] Implement kill-switch override for pending approvals in src/dispatcher/hitl_approval_manager.py to reject with "Kill-switch override" status
+- [X] T053 [US4] Add UnauthorizedError handling in src/dispatcher/cli_commands.py for failed authentication attempts with security logging
 
 **Checkpoint**: User Stories 1-4 should work together - automatic detection, approval, recursion prevention, and emergency stop
 
@@ -158,14 +158,14 @@ description: "Task list for Autonomous Skill Dispatcher implementation"
 
 ### Implementation for User Story 5
 
-- [ ] T054 [P] [US5] Create AllowedSkill model in src/dispatcher/models.py with skill_name, risk_level, requires_approval, description fields
-- [ ] T055 [US5] Implement allowlist validation in src/dispatcher/config_manager.py loading config/allowed_skills.yaml on startup
-- [ ] T056 [US5] Implement skill authorization check in src/dispatcher/skill_dispatcher.py before dispatch (reject if not in allowlist)
-- [ ] T057 [US5] Add unauthorized skill attempt logging to ExecutionLogger in src/dispatcher/logger.py with "Unauthorized skill execution attempt" events
-- [ ] T058 [US5] Implement config reload support in src/dispatcher/config_manager.py to refresh allowlist without restart when config/allowed_skills.yaml changes
-- [ ] T059 [US5] Add allowlist validation to EventDetector in src/dispatcher/event_detector.py to reject triggers for non-allowed skills at detection time
-- [ ] T060 [US5] Populate config/allowed_skills.yaml with initial allowed skills (systematic-debugging, verification-before-completion, test-driven-development)
-- [ ] T061 [US5] Integrate allowlist enforcement with HITLApprovalManager in src/dispatcher/hitl_approval_manager.py to ensure HITL flow is enforced per skill configuration
+- [X] T054 [P] [US5] Create AllowedSkill model in src/dispatcher/models.py with skill_name, risk_level, requires_approval, description fields
+- [X] T055 [US5] Implement allowlist validation in src/dispatcher/config_manager.py loading config/allowed_skills.yaml on startup
+- [X] T056 [US5] Implement skill authorization check in src/dispatcher/skill_dispatcher.py before dispatch (reject if not in allowlist)
+- [X] T057 [US5] Add unauthorized skill attempt logging to ExecutionLogger in src/dispatcher/logger.py with "Unauthorized skill execution attempt" events
+- [X] T058 [US5] Implement config reload support in src/dispatcher/config_manager.py to refresh allowlist without restart when config/allowed_skills.yaml changes
+- [X] T059 [US5] Add allowlist validation to EventDetector in src/dispatcher/event_detector.py to reject triggers for non-allowed skills at detection time
+- [X] T060 [US5] Populate config/allowed_skills.yaml with initial allowed skills (systematic-debugging, verification-before-completion, test-driven-development)
+- [X] T061 [US5] Integrate allowlist enforcement with HITLApprovalManager in src/dispatcher/hitl_approval_manager.py to ensure HITL flow is enforced per skill configuration
 
 **Checkpoint**: User Stories 1-5 should work - full security controls with allowlist, approval, and recursion prevention
 
@@ -179,15 +179,15 @@ description: "Task list for Autonomous Skill Dispatcher implementation"
 
 ### Implementation for User Story 6
 
-- [ ] T062 [P] [US6] Implement TimedRotatingFileHandler configuration in src/dispatcher/logger.py for daily log rotation at midnight
-- [ ] T063 [P] [US6] Implement log retention policy in src/dispatcher/logger.py with 90-day cleanup for standard logs
-- [ ] T064 [US6] Implement critical event archival in src/dispatcher/logger.py with 365-day retention for kill-switch and high-risk approval events
-- [ ] T065 [US6] Implement log compression in src/dispatcher/logger.py using gzip for logs older than 7 days
-- [ ] T066 [US6] Create log cleanup scheduler in src/dispatcher/log_cleanup.py running daily to enforce retention policies
-- [ ] T067 [US6] Implement log file size limit in src/dispatcher/logger.py enforcing 100MB max per file before rotation
-- [ ] T068 [US6] Add structured logging fields to all log entries in src/dispatcher/logger.py (timestamp, trigger_event, skill_name, result_status, execution_time, user_identity)
-- [ ] T069 [US6] Implement sensitive data redaction in src/dispatcher/logger.py to remove credentials and API keys from logged content
-- [ ] T070 [US6] Update config/dispatcher_config.yaml with logging configuration (retention_days=90, critical_retention_days=365, max_file_size_mb=100)
+- [X] T062 [P] [US6] Implement TimedRotatingFileHandler configuration in src/dispatcher/logger.py for daily log rotation at midnight
+- [X] T063 [P] [US6] Implement log retention policy in src/dispatcher/logger.py with 90-day cleanup for standard logs
+- [X] T064 [US6] Implement critical event archival in src/dispatcher/logger.py with 365-day retention for kill-switch and high-risk approval events
+- [X] T065 [US6] Implement log compression in src/dispatcher/logger.py using gzip for logs older than 7 days
+- [X] T066 [US6] Create log cleanup scheduler in src/dispatcher/log_cleanup.py running daily to enforce retention policies
+- [X] T067 [US6] Implement log file size limit in src/dispatcher/logger.py enforcing 100MB max per file before rotation
+- [X] T068 [US6] Add structured logging fields to all log entries in src/dispatcher/logger.py (timestamp, trigger_event, skill_name, result_status, execution_time, user_identity)
+- [X] T069 [US6] Implement sensitive data redaction in src/dispatcher/logger.py to remove credentials and API keys from logged content
+- [X] T070 [US6] Update config/dispatcher_config.yaml with logging configuration (retention_days=90, critical_retention_days=365, max_file_size_mb=100)
 
 **Checkpoint**: All user stories (1-6) should now be independently functional with comprehensive audit logging
 
@@ -197,18 +197,18 @@ description: "Task list for Autonomous Skill Dispatcher implementation"
 
 **Purpose**: Improvements that affect multiple user stories and production readiness
 
-- [ ] T071 [P] Add comprehensive error handling across all dispatcher modules with specific exception types from src/dispatcher/exceptions.py
-- [ ] T072 [P] Implement graceful degradation in src/dispatcher/main.py to continue with previous valid config when new config has errors
-- [ ] T073 [P] Add performance monitoring to src/dispatcher/skill_dispatcher.py to track dispatcher overhead and validate <5% CPU/memory impact under 100 events/hour load (NFR-001)
-- [ ] T074 [P] Implement stale lock detection in src/dispatcher/lock_manager.py to force-release locks older than 60 seconds
-- [ ] T075 [P] Add configuration validation tests in src/dispatcher/config_manager.py to validate config files on startup
-- [ ] T076 Add integration with Workspace Observer in src/observer/main.py to connect event detection with file monitoring infrastructure
-- [ ] T077 [P] Create dispatcher CLI entry point script in scripts/dispatcher_cli.py for approve/reject/kill-switch/status commands
-- [ ] T078 [P] Update quickstart.md with actual CLI commands and configuration examples based on implemented features
-- [ ] T079 [P] Add environment variable documentation to quickstart.md for DISPATCHER_ADMIN_TOKEN and other config settings
-- [ ] T080 Run quickstart.md validation to ensure all documented workflows work end-to-end
-- [ ] T081 [P] [NFR] Implement pattern matching latency test in tests/test_performance.py validating <100ms for 50 patterns (NFR-002)
-- [ ] T082 [P] [NFR] Implement throughput load test in tests/test_load.py validating 1000 executions/hour without degradation (NFR-004)
+- [X] T071 [P] Add comprehensive error handling across all dispatcher modules with specific exception types from src/dispatcher/exceptions.py
+- [X] T072 [P] Implement graceful degradation in src/dispatcher/main.py to continue with previous valid config when new config has errors
+- [X] T073 [P] Add performance monitoring to src/dispatcher/skill_dispatcher.py to track dispatcher overhead and validate <5% CPU/memory impact under 100 events/hour load (NFR-001)
+- [X] T074 [P] Implement stale lock detection in src/dispatcher/lock_manager.py to force-release locks older than 60 seconds
+- [X] T075 [P] Add configuration validation tests in src/dispatcher/config_manager.py to validate config files on startup
+- [X] T076 Add integration with Workspace Observer in src/observer/main.py to connect event detection with file monitoring infrastructure
+- [X] T077 [P] Create dispatcher CLI entry point script in scripts/dispatcher_cli.py for approve/reject/kill-switch/status commands
+- [X] T078 [P] Update quickstart.md with actual CLI commands and configuration examples based on implemented features
+- [X] T079 [P] Add environment variable documentation to quickstart.md for DISPATCHER_ADMIN_TOKEN and other config settings
+- [X] T080 Run quickstart.md validation to ensure all documented workflows work end-to-end
+- [X] T081 [P] [NFR] Implement pattern matching latency test in tests/test_performance.py validating <100ms for 50 patterns (NFR-002)
+- [X] T082 [P] [NFR] Implement throughput load test in tests/test_load.py validating 1000 executions/hour without degradation (NFR-004)
 
 ---
 

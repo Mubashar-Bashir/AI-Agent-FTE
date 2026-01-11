@@ -28,6 +28,47 @@ Data processing, storage, and operations prioritize local execution over cloud s
 ### VI. Error Recovery & Graceful Degradation
 The system must implement robust error handling, automatic retry mechanisms, and fallback procedures. During API outages, network timeouts, or service disruptions, the system degrades gracefully by notifying users, queuing operations, or switching to alternative approaches rather than failing catastrophically.
 
+### VII. Real-Time Progress Tracking & Visibility
+The AI agent must maintain real-time updates of project progress in the project_overview.html file. This includes:
+- Automatic updates to the project tracking table with current status of all specifications
+- Inventory-style checklist of project goals, components, and deliverables
+- Live status indicators for skills development, showing skill names and completion status
+- Spec list tracking with detailed status, progress percentage, and dependencies
+- Component inventory showing all system parts with their current status
+- All updates must be made continuously as work progresses to ensure stakeholder visibility
+
+## Project Environment
+
+### Development Environment
+The project operates in a hybrid Windows/WSL environment:
+
+**WSL Ubuntu (Linux Development)**
+- OS: WSL Ubuntu on Windows
+- Project Directory: `/home/mubashar/code/Hackathon-0/Dig-AI-FTE`
+- Python: 3.11+ with virtual environment
+- Command Convention: All Python commands use `python3` prefix
+- Active Technologies:
+  - watchdog (file monitoring)
+  - PyYAML (YAML parsing)
+  - pathlib (file operations)
+
+**Windows Integration**
+- Obsidian Vault Location: `D:\Hackathon-0\Obsidian_vault\FTE-Vualt`
+- Obsidian Features: Kanban board for CEO Automation Tracking Software
+- Purpose: Real-time production and development tracking for Factory operations
+- Cross-platform sync: WSL development artifacts sync to Windows Obsidian vault
+
+**State Management**
+- `.observer_state.json` - Runtime state persistence
+- `Factory_Board.md` - Factory operations Kanban synchronization
+- `SDD_Tracker.md` - Spec-Driven Development progress tracking
+- `project_overview.html` - Real-time project dashboard
+
+**Path Translation**
+When accessing Obsidian vault from WSL, use Windows path conversion:
+- Windows: `D:\Hackathon-0\Obsidian_vault\FTE-Vualt`
+- WSL: `/mnt/d/Hackathon-0/Obsidian_vault/FTE-Vualt`
+
 ## Privacy & Security Requirements
 
 All data handling must comply with strict privacy protocols:

@@ -12,7 +12,7 @@ Building a production-ready 'Digital FTE' (Digital Full-Time Equivalent) with an
 - **Version Control:** Git with semantic commit messages
 
 ## Operational Rules
-1. **Dashboard Monitoring:** Always check `00_Workspace/Dashboard.md` before and after tasks to maintain situational awareness
+1. **Dashboard Monitoring:** Always check `project_overview.html` before and after tasks to maintain situational awareness
 2. **Execution Protocol:** Use `uv run` for all script executions to ensure consistent environment
 3. **Planning Discipline:** Follow a 'Plan-First' approach: Propose logic before writing code
 4. **File Organization:** Respect the folder hierarchy (00_Workspace, 10_Governance, 20_Archive, 99_Internal)

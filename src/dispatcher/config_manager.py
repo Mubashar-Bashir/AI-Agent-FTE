@@ -1,5 +1,5 @@
 """
-Configuration manager for loading and validating YAML configuration files
+Updated configuration manager with enhanced security controls
 """
 
 import yaml
@@ -8,6 +8,7 @@ from typing import Dict, Any, List, Optional
 import logging
 
 from .exceptions import ConfigurationError
+from .security_controls import SecurityControls
 
 
 class ConfigManager:
@@ -23,9 +24,14 @@ class ConfigManager:
         self.config_dir = Path(config_dir)
         self.logger = logger or logging.getLogger(__name__)
         
+        # Initialize security controls
+        self.security_controls = SecurityControls(
+            allowlist_file=self.config_dir / "allowed_skills.yaml",
+            logger=self.logger
+        )
+        
         # Configuration caches
         self._dispatcher_config: Optional[Dict[str, Any]] = None
-        self._allowed_skills: Optional[List[Dict[str, Any]]] = None
         self._event_triggers: Optional[List[Dict[str, Any]]] = None
         
         # Load configurations on initialization
@@ -34,8 +40,8 @@ class ConfigManager:
     def reload_all(self):
         """Reload all configuration files"""
         self._dispatcher_config = self._load_dispatcher_config()
-        self._allowed_skills = self._load_allowed_skills()
         self._event_triggers = self._load_event_triggers()
+        self.security_controls.reload_allowlist()
         self.logger.info("All configurations reloaded successfully")
     
     def _load_yaml(self, filename: str) -> Dict[str, Any]:
@@ -73,13 +79,6 @@ class ConfigManager:
         self._validate_dispatcher_config(config)
         return config
     
-    def _load_allowed_skills(self) -> List[Dict[str, Any]]:
-        """Load the allowed skills configuration"""
-        config = self._load_yaml("allowed_skills.yaml")
-        skills = config.get("skills", [])
-        self._validate_allowed_skills(skills)
-        return skills
-    
     def _load_event_triggers(self) -> List[Dict[str, Any]]:
         """Load the event triggers configuration"""
         config = self._load_yaml("event_triggers.yaml")
@@ -110,34 +109,6 @@ class ConfigManager:
                 f"recursion_depth_limit must be between 1 and 10, got {depth_limit}"
             )
     
-    def _validate_allowed_skills(self, skills: List[Dict[str, Any]]):
-        """Validate allowed skills configuration"""
-        if not skills:
-            self.logger.warning("No skills in allowlist - dispatcher will reject all triggers")
-        
-        valid_risk_levels = {"low", "medium", "high"}
-        skill_names = set()
-        
-        for skill in skills:
-            # Check required fields
-            if "name" not in skill:
-                raise ConfigurationError("Skill entry missing 'name' field")
-            
-            skill_name = skill["name"]
-            
-            # Check for duplicates
-            if skill_name in skill_names:
-                raise ConfigurationError(f"Duplicate skill name in allowlist: {skill_name}")
-            skill_names.add(skill_name)
-            
-            # Validate risk_level
-            risk_level = skill.get("risk_level", "medium")
-            if risk_level not in valid_risk_levels:
-                raise ConfigurationError(
-                    f"Invalid risk_level '{risk_level}' for skill '{skill_name}'. "
-                    f"Must be one of: {valid_risk_levels}"
-                )
-    
     def _validate_event_triggers(self, triggers: List[Dict[str, Any]]):
         """Validate event triggers configuration"""
         trigger_ids = set()
@@ -163,6 +134,13 @@ class ConfigManager:
                     f"Invalid priority {priority} for trigger '{trigger_id}'. "
                     "Must be between 0 and 100"
                 )
+            
+            # Validate skill is in allowlist
+            skill_name = trigger["skill_to_invoke"]
+            if not self.security_controls.is_skill_allowed(skill_name):
+                raise ConfigurationError(
+                    f"Skill '{skill_name}' in trigger '{trigger_id}' is not in allowlist"
+                )
     
     # Public property accessors
     
@@ -170,11 +148,6 @@ class ConfigManager:
     def dispatcher_config(self) -> Dict[str, Any]:
         """Get the dispatcher configuration"""
         return self._dispatcher_config.copy()
-    
-    @property
-    def allowed_skills(self) -> List[Dict[str, Any]]:
-        """Get the list of allowed skills"""
-        return self._allowed_skills.copy()
     
     @property
     def event_triggers(self) -> List[Dict[str, Any]]:
@@ -191,10 +164,7 @@ class ConfigManager:
         Returns:
             True if skill is allowed, False otherwise
         """
-        for skill in self._allowed_skills:
-            if skill["name"] == skill_name:
-                return True
-        return False
+        return self.security_controls.is_skill_allowed(skill_name)
     
     def get_skill_config(self, skill_name: str) -> Optional[Dict[str, Any]]:
         """
@@ -206,10 +176,7 @@ class ConfigManager:
         Returns:
             Skill configuration dictionary or None if not found
         """
-        for skill in self._allowed_skills:
-            if skill["name"] == skill_name:
-                return skill.copy()
-        return None
+        return self.security_controls.get_skill_config(skill_name)
     
     def get_max_depth(self) -> int:
         """Get the configured maximum execution depth"""
@@ -218,3 +185,20 @@ class ConfigManager:
     def get_max_concurrent(self) -> int:
         """Get the configured maximum concurrent dispatches"""
         return self._dispatcher_config["dispatcher"]["max_concurrent_dispatches"]
+    
+    def validate_and_authorize_skill(
+        self,
+        skill_name: str,
+        user_identity: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Comprehensive validation and authorization check
+        
+        Args:
+            skill_name: Name of the skill to validate
+            user_identity: Identity of the requesting user
+            
+        Returns:
+            Dictionary with validation results
+        """
+        return self.security_controls.validate_and_authorize(skill_name, user_identity)

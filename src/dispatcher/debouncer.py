@@ -1,119 +1,111 @@
 """
-Debouncer (T020 - User Story 1)
-
-Suppresses duplicate events within a 30-second time window.
-Prevents event spam from triggering multiple skill dispatches.
+Pattern debouncer with time-window caching to prevent rapid-fire triggers
 """
 
 import time
-from collections import OrderedDict
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
+from functools import lru_cache
+import threading
 
 
 class Debouncer:
     """
-    Time-window based event debouncing.
-
-    Uses LRU cache to suppress duplicate events within configurable time window.
+    Prevents duplicate skill execution within a configurable time window
+    
+    Uses LRU cache with time-based expiration to suppress rapid repeated triggers
     """
-
-    def __init__(self, window_seconds: int = 30, max_cache_size: int = 1000):
+    
+    def __init__(
+        self,
+        time_window_seconds: int = 30,
+        cache_size_limit: int = 1000
+    ):
+        self.time_window = time_window_seconds
+        self.cache_size_limit = cache_size_limit
+        
+        # Cache: (pattern_id, content_hash) -> timestamp of last trigger
+        self._cache: Dict[Tuple[str, str], float] = {}
+        self._lock = threading.Lock()
+    
+    def should_suppress(
+        self,
+        pattern_id: str,
+        content_hash: str,
+        debounce_seconds: Optional[int] = None
+    ) -> bool:
         """
-        Initialize debouncer.
-
+        Check if an event should be suppressed based on debounce window
+        
         Args:
-            window_seconds: Time window for debouncing (default: 30s)
-            max_cache_size: Maximum cached events
-        """
-        self.window_seconds = window_seconds
-        self.max_cache_size = max_cache_size
-
-        # Cache: event_key -> (timestamp, count)
-        self._cache: OrderedDict[str, Tuple[float, int]] = OrderedDict()
-
-    def should_process(self, event_key: str) -> bool:
-        """
-        Check if event should be processed or debounced.
-
-        Args:
-            event_key: Unique key for the event
-
+            pattern_id: ID of the trigger pattern
+            content_hash: Hash of the event content
+            debounce_seconds: Override default time window for this event
+            
         Returns:
-            True if event should be processed, False if debounced
+            True if event should be suppressed, False if it should trigger
         """
+        with self._lock:
+            current_time = time.time()
+            cache_key = (pattern_id, content_hash)
+            
+            # Check if we've seen this event recently
+            if cache_key in self._cache:
+                last_trigger_time = self._cache[cache_key]
+                time_window = debounce_seconds or self.time_window
+                
+                # Check if still within debounce window
+                if current_time - last_trigger_time < time_window:
+                    return True  # Suppress - too soon
+            
+            # Update cache with current timestamp
+            self._cache[cache_key] = current_time
+            
+            # Cleanup old entries if cache is getting large
+            if len(self._cache) > self.cache_size_limit:
+                self._cleanup_old_entries()
+            
+            return False  # Allow trigger
+    
+    def _cleanup_old_entries(self):
+        """Remove entries older than the time window (internal, must hold lock)"""
         current_time = time.time()
-
-        # Clean up expired entries
-        self._cleanup_expired(current_time)
-
-        # Check if event exists in cache
-        if event_key in self._cache:
-            cached_time, count = self._cache[event_key]
-
-            # Check if within debounce window
-            if current_time - cached_time <= self.window_seconds:
-                # Still within window - debounce (don't process)
-                # Update count and timestamp
-                self._cache[event_key] = (current_time, count + 1)
-                self._cache.move_to_end(event_key)
-                return False
-
-            # Window expired - process and reset
-            self._cache[event_key] = (current_time, 1)
-            self._cache.move_to_end(event_key)
-            return True
-
-        # New event - add to cache and process
-        self._cache[event_key] = (current_time, 1)
-
-        # Enforce max cache size (LRU eviction)
-        if len(self._cache) > self.max_cache_size:
-            self._cache.popitem(last=False)
-
-        return True
-
-    def _cleanup_expired(self, current_time: float) -> None:
-        """
-        Remove expired entries from cache.
-
-        Args:
-            current_time: Current timestamp
-        """
-        expired_keys = []
-        for event_key, (cached_time, _) in self._cache.items():
-            if current_time - cached_time > self.window_seconds:
-                expired_keys.append(event_key)
-            else:
-                # OrderedDict maintains insertion order
-                # Once we hit non-expired, rest are also non-expired
-                break
-
-        for key in expired_keys:
+        
+        # Find keys to remove
+        keys_to_remove = [
+            key for key, timestamp in self._cache.items()
+            if current_time - timestamp > self.time_window * 2  # Keep 2x window
+        ]
+        
+        # Remove old entries
+        for key in keys_to_remove:
             del self._cache[key]
-
-    def get_event_count(self, event_key: str) -> int:
-        """
-        Get number of times event was seen within current window.
-
-        Args:
-            event_key: Event key to check
-
-        Returns:
-            Count of events (0 if not in cache or expired)
-        """
-        current_time = time.time()
-
-        if event_key in self._cache:
-            cached_time, count = self._cache[event_key]
-            if current_time - cached_time <= self.window_seconds:
-                return count
-
-        return 0
-
-    def clear(self) -> None:
-        """Clear all cached events."""
-        self._cache.clear()
-
+    
+    def clear(self):
+        """Clear all cached entries (for testing)"""
+        with self._lock:
+            self._cache.clear()
+    
     def get_cache_size(self) -> int:
-        """Get current cache size."""
-        return len(self._cache)
+        """Get current cache size"""
+        with self._lock:
+            return len(self._cache)
+    
+    def is_in_window(self, pattern_id: str, content_hash: str) -> bool:
+        """
+        Check if an event is within the debounce window (without updating cache)
+        
+        Args:
+            pattern_id: ID of the trigger pattern
+            content_hash: Hash of the event content
+            
+        Returns:
+            True if event is within debounce window, False otherwise
+        """
+        with self._lock:
+            cache_key = (pattern_id, content_hash)
+            if cache_key not in self._cache:
+                return False
+            
+            current_time = time.time()
+            last_trigger_time = self._cache[cache_key]
+            return current_time - last_trigger_time < self.time_window

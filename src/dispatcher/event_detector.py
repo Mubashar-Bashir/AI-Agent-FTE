@@ -1,189 +1,173 @@
 """
-Event Detector (T019 - User Story 1)
-
-Monitors log files for error patterns and triggers skill dispatch.
-Integrates with EventHasher for deduplication and Debouncer for suppression.
+Event detector that monitors logs and triggers skills based on pattern matching
 """
 
 import re
+from typing import List, Dict, Any, Optional
 from pathlib import Path
-from typing import List, Optional, Dict, Any
-from queue import Queue, Empty
+import logging
 
-from .models import EventTrigger, RiskLevel
+from .models import EventTrigger
 from .config_manager import ConfigManager
-from .event_hasher import EventHasher
-from .debouncer import Debouncer
 from .regex_validator import RegexValidator
-from .exceptions import ValidationError
+from .debouncer import Debouncer
+from .event_hasher import EventHasher
+from .exceptions import InvalidPatternError, SkillNotAllowedError
 
 
 class EventDetector:
     """
-    Detects events based on pattern matching and queues them for processing.
-
-    Integrates deduplication (EventHasher) and debouncing (Debouncer).
+    Detects events in log files and queues skill executions based on configured patterns
     """
-
+    
     def __init__(
         self,
         config_manager: ConfigManager,
-        debounce_window: int = 30
+        debouncer: Debouncer,
+        event_hasher: EventHasher,
+        logger: Optional[logging.Logger] = None
     ):
-        """
-        Initialize event detector.
-
-        Args:
-            config_manager: Configuration manager for loading triggers
-            debounce_window: Debounce window in seconds
-        """
-        self.config = config_manager
-        self.triggers = config_manager.get_event_triggers()
-
-        # Initialize deduplication and debouncing
-        self.hasher = EventHasher(time_window_seconds=debounce_window)
-        self.debouncer = Debouncer(window_seconds=debounce_window)
-
-        # Regex validator for pattern safety
-        self.validator = RegexValidator()
-
-        # Event queue for async processing
-        self.event_queue: Queue = Queue()
-
-        # Compile patterns for performance
+        self.config_manager = config_manager
+        self.debouncer = debouncer
+        self.event_hasher = event_hasher
+        self.logger = logger or logging.getLogger(__name__)
+        
+        # Compiled patterns cache
         self._compiled_patterns: Dict[str, re.Pattern] = {}
-        self._compile_patterns()
-
-    def _compile_patterns(self) -> None:
-        """Pre-compile regex patterns for performance."""
-        for trigger in self.triggers:
-            if not trigger.enabled:
+        
+        # Load and compile patterns
+        self._load_patterns()
+    
+    def _load_patterns(self):
+        """Load and compile regex patterns from configuration"""
+        triggers = self.config_manager.event_triggers
+        
+        for trigger in triggers:
+            if not trigger.get("enabled", True):
                 continue
-
-            # Validate pattern
-            is_valid, error_msg = self.validator.validate(trigger.pattern)
-            if not is_valid:
-                print(f"⚠️  Skipping invalid pattern: {error_msg}")
-                continue
-
+            
+            pattern_str = trigger["pattern"]
+            trigger_id = trigger["id"]
+            
             try:
-                self._compiled_patterns[trigger.pattern] = re.compile(trigger.pattern)
+                # Validate pattern for safety (ReDoS prevention)
+                RegexValidator.validate(pattern_str)
+                
+                # Compile pattern
+                compiled = re.compile(pattern_str, re.IGNORECASE)
+                self._compiled_patterns[trigger_id] = compiled
+                
+                self.logger.info(f"Loaded pattern: {trigger_id} -> {pattern_str}")
+                
+            except InvalidPatternError as e:
+                self.logger.error(f"Invalid pattern for trigger '{trigger_id}': {e}")
+                # Skip this pattern
             except re.error as e:
-                print(f"⚠️  Failed to compile pattern '{trigger.pattern}': {e}")
-
-    def detect_events(self, log_content: str) -> List[EventTrigger]:
+                self.logger.error(f"Failed to compile pattern for trigger '{trigger_id}': {e}")
+    
+    def detect_events(self, log_line: str, source_file: str = "") -> List[Dict[str, Any]]:
         """
-        Detect events in log content.
-
+        Detect events in a log line and return list of skill dispatch requests
+        
         Args:
-            log_content: Content to scan for patterns
-
+            log_line: The log line to check for patterns
+            source_file: Optional source file path for context
+            
         Returns:
-            List of triggered events
+            List of dispatch request dictionaries
         """
-        triggered_events = []
-
-        for trigger in self.triggers:
-            if not trigger.enabled:
+        dispatch_requests = []
+        triggers = self.config_manager.event_triggers
+        
+        # Sort triggers by priority (lower number = higher priority)
+        sorted_triggers = sorted(
+            [t for t in triggers if t.get("enabled", True)],
+            key=lambda t: t.get("priority", 10)
+        )
+        
+        for trigger in sorted_triggers:
+            trigger_id = trigger["id"]
+            
+            # Skip if pattern didn't compile
+            if trigger_id not in self._compiled_patterns:
                 continue
-
-            # Get compiled pattern
-            pattern = self._compiled_patterns.get(trigger.pattern)
-            if not pattern:
+            
+            pattern = self._compiled_patterns[trigger_id]
+            
+            # Check if pattern matches
+            match = pattern.search(log_line)
+            if not match:
                 continue
-
-            # Check for matches
-            if pattern.search(log_content):
-                # Check deduplication
-                event_data = f"{trigger.event_type}:{trigger.pattern}:{log_content[:200]}"
-                if self.hasher.is_duplicate(event_data):
-                    continue
-
-                # Check debouncing
-                event_key = f"{trigger.skill_to_invoke}:{trigger.event_type}"
-                if not self.debouncer.should_process(event_key):
-                    continue
-
-                # Verify skill is allowed
-                if not self.config.is_skill_allowed(trigger.skill_to_invoke):
-                    print(f"⚠️  Skill '{trigger.skill_to_invoke}' not in allowlist - skipping")
-                    continue
-
-                # Event should be processed
-                triggered_events.append(trigger)
-
-                # Mark as processed
-                self.hasher.mark_processed(event_data)
-
-        return triggered_events
-
-    def queue_event(self, trigger: EventTrigger, context: Dict[str, Any]) -> None:
-        """
-        Queue event for processing.
-
-        Args:
-            trigger: Event trigger that fired
-            context: Additional context about the event
-        """
-        self.event_queue.put({
-            "trigger": trigger,
-            "context": context,
-            "timestamp": self.hasher.mark_processed(
-                f"{trigger.event_type}:{trigger.skill_to_invoke}"
+            
+            # Pattern matched - create dispatch request
+            skill_name = trigger["skill_to_invoke"]
+            
+            # Check if skill is in allowlist
+            if not self.config_manager.is_skill_allowed(skill_name):
+                self.logger.warning(
+                    f"Skill '{skill_name}' triggered by pattern '{trigger_id}' "
+                    f"but not in allowlist - rejecting"
+                )
+                continue
+            
+            # Generate event hash for deduplication
+            event_hash = self.event_hasher.generate_hash(trigger_id, log_line)
+            
+            # Check if this event is already being processed
+            if self.event_hasher.is_duplicate(event_hash):
+                self.logger.debug(
+                    f"Event already being processed (hash: {event_hash[:16]}...) - skipping"
+                )
+                continue
+            
+            # Check debounce window
+            debounce_seconds = trigger.get("debounce_seconds", 30)
+            if self.debouncer.should_suppress(trigger_id, event_hash, debounce_seconds):
+                self.logger.info(
+                    f"Event suppressed by debouncer: {trigger_id} "
+                    f"(within {debounce_seconds}s window)"
+                )
+                continue
+            
+            # Mark event as processing
+            self.event_hasher.mark_processing(event_hash)
+            
+            # Create dispatch request
+            dispatch_request = {
+                "trigger_id": trigger_id,
+                "trigger_name": trigger["name"],
+                "event_type": trigger["event_type"],
+                "skill_name": skill_name,
+                "risk_level": trigger.get("risk_level", "medium"),
+                "requires_approval": trigger.get("requires_approval", False),
+                "event_hash": event_hash,
+                "trigger_event": {
+                    "source_file": source_file,
+                    "matched_line": log_line,
+                    "pattern": trigger["pattern"],
+                    "match_position": match.start(),
+                    "matched_text": match.group(0)
+                },
+                "priority": trigger.get("priority", 10)
+            }
+            
+            dispatch_requests.append(dispatch_request)
+            
+            self.logger.info(
+                f"Event detected: {trigger_id} -> {skill_name} "
+                f"(risk: {trigger.get('risk_level', 'medium')})"
             )
-        })
-
-    def get_queued_event(self, timeout: float = 1.0) -> Optional[Dict[str, Any]]:
-        """
-        Get next queued event.
-
-        Args:
-            timeout: Timeout in seconds
-
-        Returns:
-            Event dict or None if queue empty
-        """
-        try:
-            return self.event_queue.get(timeout=timeout)
-        except Empty:
-            return None
-
-    def scan_file(self, file_path: Path) -> List[EventTrigger]:
-        """
-        Scan a file for error patterns.
-
-        Args:
-            file_path: Path to file to scan
-
-        Returns:
-            List of triggered events
-        """
-        try:
-            content = file_path.read_text(encoding='utf-8', errors='ignore')
-            return self.detect_events(content)
-        except Exception as e:
-            print(f"⚠️  Error scanning {file_path}: {e}")
-            return []
-
-    def reload_triggers(self) -> None:
-        """Reload event triggers from config."""
-        self.config.reload()
-        self.triggers = self.config.get_event_triggers()
+        
+        return dispatch_requests
+    
+    def reload_patterns(self):
+        """Reload patterns from configuration (for hot reload)"""
+        self.logger.info("Reloading event patterns...")
         self._compiled_patterns.clear()
-        self._compile_patterns()
-
-    def get_stats(self) -> Dict[str, Any]:
-        """
-        Get detector statistics.
-
-        Returns:
-            Stats dict
-        """
-        return {
-            "triggers_loaded": len(self.triggers),
-            "triggers_enabled": sum(1 for t in self.triggers if t.enabled),
-            "patterns_compiled": len(self._compiled_patterns),
-            "queued_events": self.event_queue.qsize(),
-            "hasher_cache_size": self.hasher.get_cache_size(),
-            "debouncer_cache_size": self.debouncer.get_cache_size()
-        }
+        self.config_manager.reload_all()
+        self._load_patterns()
+        self.logger.info(f"Loaded {len(self._compiled_patterns)} active patterns")
+    
+    def get_active_patterns(self) -> List[str]:
+        """Get list of active pattern IDs"""
+        return list(self._compiled_patterns.keys())
