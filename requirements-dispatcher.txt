@@ -1,0 +1,17 @@
+# Autonomous Skill Dispatcher Dependencies
+# Python 3.11+ required
+
+# File monitoring and event detection
+watchdog>=3.0.0
+
+# Configuration management
+PyYAML>=6.0
+
+# File path operations
+pathlib2>=2.3.7
+
+# Logging enhancements
+python-json-logger>=2.0.7
+
+# Hashing and security
+cryptography>=41.0.0

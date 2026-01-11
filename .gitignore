@@ -56,3 +56,8 @@ htmlcov/
 # Temporary files
 *.tmp
 *.temp
+
+# Dispatcher state and runtime files
+.state/
+.approvals/
+locks/

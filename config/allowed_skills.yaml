@@ -1,0 +1,18 @@
+# Allowed Skills Configuration
+# Only skills in this list can be triggered by the dispatcher
+
+skills:
+  - name: "systematic-debugging"
+    risk_level: "medium"
+    requires_approval: false
+    description: "Analyzes errors and proposes fixes without modifying code"
+
+  - name: "test-driven-development"
+    risk_level: "high"
+    requires_approval: true
+    description: "Creates and modifies test files"
+
+  - name: "verification-before-completion"
+    risk_level: "low"
+    requires_approval: false
+    description: "Runs verification commands and reports results"

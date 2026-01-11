@@ -1,0 +1,366 @@
+openapi: 3.0.0
+info:
+  title: Autonomous Skill Dispatcher API
+  version: 1.0.0
+  description: API for managing and executing automated skill dispatches based on event detection
+
+paths:
+  /api/dispatcher/register-trigger:
+    post:
+      summary: Register a new event trigger
+      description: Creates a new event trigger that will execute a skill when a pattern is detected
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventTrigger'
+      responses:
+        '201':
+          description: Event trigger created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventTrigger'
+        '400':
+          description: Invalid input
+        '409':
+          description: Conflict - trigger with this name already exists
+
+  /api/dispatcher/update-trigger/{triggerId}:
+    put:
+      summary: Update an existing event trigger
+      description: Updates an existing event trigger configuration
+      parameters:
+        - name: triggerId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventTrigger'
+      responses:
+        '200':
+          description: Event trigger updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventTrigger'
+        '400':
+          description: Invalid input
+        '404':
+          description: Trigger not found
+
+  /api/dispatcher/delete-trigger/{triggerId}:
+    delete:
+      summary: Delete an event trigger
+      description: Removes an event trigger so it no longer executes skills
+      parameters:
+        - name: triggerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Event trigger deleted successfully
+        '404':
+          description: Trigger not found
+
+  /api/dispatcher/dispatch:
+    post:
+      summary: Manually dispatch a skill
+      description: Manually execute a skill with the dispatcher mechanism
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                skill_name:
+                  type: string
+                  description: Name of the skill to execute
+                parameters:
+                  type: object
+                  description: Parameters to pass to the skill
+                context:
+                  type: object
+                  description: Context information for the skill
+      responses:
+        '200':
+          description: Skill dispatched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillDispatchRecord'
+        '400':
+          description: Invalid input
+        '403':
+          description: Skill not allowed for automatic execution
+
+  /api/dispatcher/status:
+    get:
+      summary: Get dispatcher status
+      description: Returns current status and statistics of the dispatcher
+      responses:
+        '200':
+          description: Dispatcher status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                    description: Whether the dispatcher is currently enabled
+                  active_triggers_count:
+                    type: integer
+                    description: Number of currently active triggers
+                  total_dispatches:
+                    type: integer
+                    description: Total number of dispatches recorded
+                  failed_dispatches:
+                    type: integer
+                    description: Number of failed dispatches
+                  last_dispatch:
+                    type: string
+                    format: date-time
+                    description: Timestamp of last dispatch
+                  config:
+                    $ref: '#/components/schemas/DispatcherConfig'
+
+  /api/dispatcher/triggers:
+    get:
+      summary: Get all event triggers
+      description: Returns a list of all configured event triggers
+      responses:
+        '200':
+          description: List of event triggers retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventTrigger'
+
+  /api/dispatcher/dispatches:
+    get:
+      summary: Get dispatch records
+      description: Returns a list of skill dispatch records
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pending, success, failure, timeout]
+      responses:
+        '200':
+          description: List of dispatch records retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SkillDispatchRecord'
+                  total:
+                    type: integer
+                    description: Total number of records available
+
+  /api/dispatcher/config:
+    get:
+      summary: Get dispatcher configuration
+      description: Returns the current dispatcher configuration
+      responses:
+        '200':
+          description: Configuration retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispatcherConfig'
+    put:
+      summary: Update dispatcher configuration
+      description: Updates the dispatcher configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DispatcherConfig'
+      responses:
+        '200':
+          description: Configuration updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispatcherConfig'
+        '400':
+          description: Invalid input
+
+components:
+  schemas:
+    EventTrigger:
+      type: object
+      required:
+        - name
+        - event_type
+        - pattern
+        - skill_to_invoke
+        - enabled
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the trigger
+        name:
+          type: string
+          description: Human-readable name for the trigger
+          maxLength: 100
+        event_type:
+          type: string
+          description: Type of event to monitor
+          enum: [error, warning, info, debug, custom]
+        pattern:
+          type: string
+          description: Regex pattern to match in logs
+        skill_to_invoke:
+          type: string
+          description: Name of the skill to execute when pattern matches
+        conditions:
+          type: object
+          description: Additional conditions for triggering
+        enabled:
+          type: boolean
+          description: Whether this trigger is active
+          default: true
+        priority:
+          type: integer
+          description: Priority level for resolving conflicts (lower = higher priority)
+          default: 10
+          minimum: 0
+          maximum: 100
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when trigger was created
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when trigger was last updated
+
+    SkillDispatchRecord:
+      type: object
+      required:
+        - timestamp
+        - trigger_id
+        - trigger_event
+        - skill_invoked
+        - status
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the dispatch record
+        timestamp:
+          type: string
+          format: date-time
+          description: When the dispatch occurred
+        trigger_id:
+          type: string
+          description: ID of the trigger that caused this dispatch
+        trigger_event:
+          type: object
+          description: Details of the triggering event
+        skill_invoked:
+          type: string
+          description: Name of the skill that was executed
+        parameters:
+          type: object
+          description: Parameters passed to the skill
+        status:
+          type: string
+          description: Execution status
+          enum: [pending, success, failure, timeout]
+        execution_log:
+          type: string
+          description: Output from skill execution
+          maxLength: 10000
+        duration_ms:
+          type: integer
+          description: Time taken for skill execution in milliseconds
+        error_message:
+          type: string
+          description: Error message if execution failed
+          maxLength: 1000
+
+    DispatcherConfig:
+      type: object
+      required:
+        - enabled
+      properties:
+        id:
+          type: string
+          description: Unique identifier for config
+        enabled:
+          type: boolean
+          description: Whether the dispatcher is enabled
+          default: true
+        max_concurrent_dispatches:
+          type: integer
+          description: Maximum number of concurrent skill executions
+          default: 3
+          minimum: 1
+          maximum: 10
+        throttle_interval_ms:
+          type: integer
+          description: Minimum time between dispatches
+          default: 1000
+          minimum: 100
+          maximum: 60000
+        retry_attempts:
+          type: integer
+          description: Number of retry attempts for failed dispatches
+          default: 2
+          minimum: 0
+          maximum: 5
+        retry_delay_ms:
+          type: integer
+          description: Delay between retry attempts
+          default: 5000
+        recursion_depth_limit:
+          type: integer
+          description: Maximum depth of nested skill calls
+          default: 3
+          minimum: 1
+          maximum: 10
+        log_level:
+          type: string
+          description: Logging level
+          enum: [debug, info, warning, error]
+          default: info
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when config was created
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when config was last updated
